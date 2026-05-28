@@ -136,7 +136,14 @@ Run `/cliproxy-setup` in Pi and enter:
 - **providerPrefix** — short slug for custom provider names (e.g. `corp`, `myproxy`)
 - **usageKey** — same value as `PI_PLUGIN_USAGE_KEY` above (enables `/cliproxy-usage`)
 
-The sidecar is **optional** — the plugin works without it using `/v1/models` + local classification. But you lose enriched metadata and `/cliproxy-usage`.
+The sidecar is **optional for basic usage** — without it the plugin falls back to raw `/v1/models` with local heuristics. What changes:
+
+| | With sidecar | Without sidecar |
+| --- | --- | --- |
+| Model discovery | Enriched from [models.dev](https://models.dev) (real context windows, costs, reasoning) | Defaults: `contextWindow=128k`, `maxTokens=16k`, `cost=0`, `reasoning=false` |
+| `/cliproxy-usage` | Works — per-account quota bars | **Does not work** (no `/api/usage` endpoint) |
+| Classification | Server-side, accurate | Local heuristics by `owned_by` |
+| `/cliproxy`, `/cliproxy-list`, `/cliproxy-doctor` | Work | Work |
 
 ## Layout
 
