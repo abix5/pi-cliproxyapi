@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/pi-cliproxyapi)](https://www.npmjs.com/package/pi-cliproxyapi)
 [![GitHub](https://img.shields.io/github/license/abix5/pi-cliproxyapi)](https://github.com/abix5/pi-cliproxyapi)
 
-Pi extension for corporate management of model providers via a single [CliProxyAPI](https://github.com/nicepkg/cliproxyapi) endpoint.
+Pi extension for corporate management of model providers via a single [CliProxyAPI](https://github.com/router-for-me/CLIProxyAPI) endpoint.
 
 One `(endpoint, apiKey)` pair — every provider and model inherits it automatically.
 
@@ -28,7 +28,7 @@ One `(endpoint, apiKey)` pair — every provider and model inherits it automatic
 
 ## Prerequisites
 
-You need a running [CliProxyAPI](https://github.com/nicepkg/cliproxyapi) instance — this is the corporate LLM proxy that aggregates multiple providers behind a single OpenAI-compatible endpoint.
+You need a running [CliProxyAPI](https://github.com/router-for-me/CLIProxyAPI) instance — this is the corporate LLM proxy that aggregates multiple providers behind a single OpenAI-compatible endpoint.
 
 For full functionality (`/cliproxy-usage`, enriched model metadata from [models.dev](https://models.dev)), also deploy the companion sidecar: **[pi-cliproxyapi-wellknown](https://github.com/abix5/pi-cliproxyapi-wellknown)**. See [Deploying the sidecar](#deploying-the-sidecar-service) below.
 
