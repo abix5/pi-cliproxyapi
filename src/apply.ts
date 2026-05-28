@@ -59,7 +59,7 @@ export async function applyAll(
 		}>;
 		try {
 			builtin = getModels(name as any) as any;
-		} catch (err) {
+		} catch {
 			report.skipped.push({
 				provider: name,
 				reason: `pi-ai has no provider "${name}"`,
