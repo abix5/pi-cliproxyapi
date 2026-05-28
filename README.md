@@ -1,5 +1,8 @@
 # pi-cliproxyapi
 
+[![npm](https://img.shields.io/npm/v/pi-cliproxyapi)](https://www.npmjs.com/package/pi-cliproxyapi)
+[![GitHub](https://img.shields.io/github/license/abix5/pi-cliproxyapi)](https://github.com/abix5/pi-cliproxyapi)
+
 Pi extension for corporate management of model providers via a single [CliProxyAPI](https://github.com/nicepkg/cliproxyapi) endpoint.
 
 One `(endpoint, apiKey)` pair — every provider and model inherits it automatically.
@@ -23,10 +26,16 @@ One `(endpoint, apiKey)` pair — every provider and model inherits it automatic
 | `/cliproxy-usage` | Per-account quota windows with progress bars (`d` = show disabled, `v` = verbose) |
 | `/cliproxy-doctor` | Connectivity, key resolution, discovery diagnostics |
 
+## Prerequisites
+
+You need a running [CliProxyAPI](https://github.com/nicepkg/cliproxyapi) instance — this is the corporate LLM proxy that aggregates multiple providers behind a single OpenAI-compatible endpoint.
+
+For full functionality (`/cliproxy-usage`, enriched model metadata from [models.dev](https://models.dev)), also deploy the companion sidecar: **[pi-cliproxyapi-wellknown](https://github.com/abix5/pi-cliproxyapi-wellknown)**. See [Deploying the sidecar](#deploying-the-sidecar-service) below.
+
 ## Install
 
 ```bash
-pi install pi-cliproxyapi
+pi install npm:pi-cliproxyapi
 ```
 
 Then run `/cliproxy-setup` to configure your proxy endpoint.
@@ -60,11 +69,14 @@ Values support `!command` (shell exec), `$ENV_VAR`, `~/path` (auto-wrapped to `!
 
 ## Discovery
 
-The plugin tries `GET <endpoint-origin>/.well-known/pi` first (requires the companion sidecar service). If unavailable, falls back to `GET <endpoint>/models` with local heuristics.
+The plugin tries `GET <endpoint-origin>/.well-known/pi` first (requires the sidecar). If unavailable, falls back to `GET <endpoint>/models` with local heuristics.
 
-### Optional: companion discovery service
+## Deploying the sidecar service
 
-For richer model metadata (context windows, costs, reasoning flags from models.dev) and per-account usage, deploy **[pi-cliproxyapi-wellknown](https://github.com/abix5/pi-cliproxyapi-wellknown)** alongside your CliProxyAPI instance.
+The **[pi-cliproxyapi-wellknown](https://github.com/abix5/pi-cliproxyapi-wellknown)** sidecar runs alongside CliProxyAPI and provides:
+
+- `/.well-known/pi` — model discovery with metadata from [models.dev](https://models.dev) (context windows, costs, reasoning flags)
+- `/api/usage` — per-account quota windows used by `/cliproxy-usage`
 
 ```
 ┌──────────────┐     ┌───────────────────────────┐
@@ -79,7 +91,52 @@ For richer model metadata (context windows, costs, reasoning flags from models.d
 └──────────────┘
 ```
 
-The sidecar is **optional** — the plugin works without it using `/v1/models` + local classification.
+### Quick start with Docker Compose
+
+Clone the sidecar repo next to your CliProxyAPI deployment:
+
+```bash
+git clone https://github.com/abix5/pi-cliproxyapi-wellknown.git
+```
+
+Add to your `docker-compose.yml`:
+
+```yaml
+services:
+  cliproxyapi:
+    # ... your existing CliProxyAPI service ...
+
+  pi-cliproxyapi-wellknown:
+    build:
+      context: ./pi-cliproxyapi-wellknown
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3458:3458"
+    environment:
+      UPSTREAM_MODELS_URL: http://cliproxyapi:8317/v1/models
+      UPSTREAM_TOKEN: ${UPSTREAM_TOKEN}          # CliProxyAPI bearer key
+      PI_PUBLIC_BASE_URL: ${PI_PUBLIC_BASE_URL}  # e.g. https://proxy.example.com/v1
+      MANAGEMENT_API_URL: http://cliproxyapi:8317/v0/management
+      MANAGEMENT_API_KEY: ${MANAGEMENT_API_KEY}
+      PI_PLUGIN_USAGE_KEY: ${PI_PLUGIN_USAGE_KEY}  # shared with Pi plugin
+    depends_on:
+      cliproxyapi:
+        condition: service_healthy
+    networks:
+      - your-network
+```
+
+Then route `/.well-known/pi` and `/api/usage` on your public domain to port 3458 via your reverse proxy (Nginx, Caddy, Cloudflare Tunnel, etc.).
+
+### Connecting the plugin
+
+Run `/cliproxy-setup` in Pi and enter:
+- **endpoint** — your public proxy URL ending with `/v1`
+- **apiKey** — CliProxyAPI bearer key
+- **providerPrefix** — short slug for custom provider names (e.g. `corp`, `myproxy`)
+- **usageKey** — same value as `PI_PLUGIN_USAGE_KEY` above (enables `/cliproxy-usage`)
+
+The sidecar is **optional** — the plugin works without it using `/v1/models` + local classification. But you lose enriched metadata and `/cliproxy-usage`.
 
 ## Layout
 
