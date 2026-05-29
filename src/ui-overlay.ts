@@ -1,4 +1,4 @@
-// Read-only scrollable overlay used by /cliproxy-list, /cliproxy-usage, /cliproxy-doctor.
+// Read-only scrollable overlay used by /cliproxy-usage and /cliproxy-doctor.
 //
 // Pure presentational — never touches the agent session or context. The
 // caller may supply boolean "toggles" (one keystroke each) that re-render the
@@ -22,6 +22,8 @@ import {
 	matchesKey,
 	visibleWidth,
 } from "@earendil-works/pi-tui";
+
+import { frame } from "./ui-frame.ts";
 
 interface Theme {
 	fg(name: string, s: string): string;
@@ -76,7 +78,6 @@ function buildOverlay(
 	};
 
 	const renderFrame = (width: number, height: number): string[] => {
-		const inner = Math.max(10, width - 2);
 		const visible = Math.max(1, height - 2);
 		const total = lines.length;
 		const maxOffset = Math.max(0, total - visible);
@@ -87,26 +88,22 @@ function buildOverlay(
 			total > visible
 				? Math.min(100, Math.round(((offset + visible) / total) * 100))
 				: 100;
-		const titleBar = formatTitleBar(t, props.title, inner);
-		const footerBar = formatFooterBar(t, {
-			from: offset + 1,
-			to: Math.min(total, offset + visible),
-			total,
-			pct,
-			width: inner,
-			toggles: (props.toggles ?? []).map((tg) => ({
-				hint: tg.hint,
-				active: state[tg.key] === true,
-			})),
+		const hintBase = "\u2191\u2193 \u00b7 pgUp/pgDn \u00b7 g/G";
+		const togglesText = (props.toggles ?? [])
+			.map((tg) =>
+				state[tg.key] === true
+					? t.fg("success", `[${tg.hint}]`)
+					: t.fg("dim", tg.hint),
+			)
+			.join(" \u00b7 ");
+		const hint = ` ${hintBase}${togglesText ? "  " + togglesText : ""} `;
+		const badge = ` ${offset + 1}\u2013${Math.min(total, offset + visible)} of ${total}  ${pct}% `;
+		return frame(t, {
+			width,
+			title: ` ${props.title} `,
+			lines: slice.map((ln) => ` ${ln}`),
+			footer: { hint, badge },
 		});
-		const sideL = t.fg("borderAccent", "│");
-		const sideR = t.fg("borderAccent", "│");
-		const out: string[] = [titleBar];
-		for (const ln of slice) {
-			out.push(`${sideL} ${padRight(ln, inner - 2)} ${sideR}`);
-		}
-		out.push(footerBar);
-		return out;
 	};
 
 	return {
@@ -172,60 +169,6 @@ function buildOverlay(
 			}
 		},
 	};
-}
-
-// --------------------------------------------------------------------------- chrome helpers
-
-function formatTitleBar(theme: Theme, title: string, inner: number): string {
-	const label = ` ${title} `;
-	const leftSep = "╭─";
-	const rightFill = inner - visibleWidth(label) - visibleWidth(leftSep) - 2;
-	const fill = "─".repeat(Math.max(0, rightFill));
-	return theme.fg(
-		"borderAccent",
-		`${leftSep}${theme.bold(theme.fg("accent", label))}${theme.fg("borderAccent", fill)}╮`,
-	);
-}
-
-function formatFooterBar(
-	theme: Theme,
-	opts: {
-		from: number;
-		to: number;
-		total: number;
-		pct: number;
-		width: number;
-		toggles: Array<{ hint: string; active: boolean }>;
-	},
-): string {
-	const hintBase = "↑↓ · pgUp/pgDn · g/G";
-	const togglesText = opts.toggles
-		.map((tg) =>
-			tg.active
-				? theme.fg("success", `[${tg.hint}]`)
-				: theme.fg("dim", tg.hint),
-		)
-		.join(" · ");
-	const left = ` ${hintBase}${togglesText ? "  " + togglesText : ""} `;
-	const right = ` ${opts.from}–${opts.to} of ${opts.total}  ${opts.pct}% `;
-	const leftSep = "╰─";
-	const rightSep = "╯";
-	const used =
-		visibleWidth(leftSep) +
-		visibleWidth(rightSep) +
-		visibleWidth(left) +
-		visibleWidth(right);
-	const filler = "─".repeat(Math.max(0, opts.width - used));
-	return theme.fg(
-		"borderAccent",
-		`${leftSep}${theme.fg("dim", left)}${filler}${theme.fg("muted", right)}${rightSep}`,
-	);
-}
-
-function padRight(s: string, width: number): string {
-	const w = visibleWidth(s);
-	if (w >= width) return s;
-	return s + " ".repeat(width - w);
 }
 
 // --------------------------------------------------------------------------- public API

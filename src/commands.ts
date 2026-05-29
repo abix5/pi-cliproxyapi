@@ -2,7 +2,6 @@
 //   /cliproxy           — open the picker overlay
 //   /cliproxy-setup     — first-run / re-run setup wizard for endpoint+keys
 //   /cliproxy-refresh   — refetch discovery + re-apply
-//   /cliproxy-list      — show all upstream models in an overlay
 //   /cliproxy-usage     — fetch /api/usage and render in overlay
 //   /cliproxy-doctor    — connectivity + key-resolution diagnostics
 
@@ -18,7 +17,7 @@ import { fetchDiscovery, PLUGIN_USER_AGENT } from "./fetch-models.ts";
 import { clearUsageCache, fetchUsage } from "./fetch-usage.ts";
 import { log } from "./log.ts";
 import { showOverlay } from "./ui-overlay.ts";
-import { runPicker } from "./ui-picker.ts";
+import { runPicker } from "./ui-picker/index.ts";
 import { runSetup } from "./ui-setup.ts";
 import { renderUsage } from "./ui-usage.ts";
 
@@ -39,11 +38,6 @@ export function registerCommands(pi: ExtensionAPI): void {
 		description:
 			"Re-fetch upstream model list and re-apply provider registrations",
 		handler: handleRefresh.bind(null, pi),
-	});
-
-	pi.registerCommand("cliproxy-list", {
-		description: "Show every upstream model in a scrollable overlay",
-		handler: handleList,
 	});
 
 	pi.registerCommand("cliproxy-usage", {
@@ -145,27 +139,6 @@ async function handleRefresh(
 	} catch (err) {
 		ctx.ui.notify(`refresh failed: ${(err as Error).message}`, "error");
 	}
-}
-
-// --------------------------------------------------------------------------- /cliproxy-list
-
-async function handleList(
-	_args: string,
-	ctx: ExtensionCommandContext,
-): Promise<void> {
-	const cfg = loadConfig();
-	const resolvedKey = resolveConfigValue(cfg.proxy.apiKey);
-	let discovery;
-	try {
-		discovery = await fetchDiscovery(cfg, resolvedKey);
-	} catch (err) {
-		ctx.ui.notify(`list failed: ${(err as Error).message}`, "error");
-		return;
-	}
-	await runPicker(ctx, cfg, discovery, {
-		readOnly: true,
-		title: " /cliproxy-list \u00b7 read-only ",
-	});
 }
 
 // --------------------------------------------------------------------------- /cliproxy-usage

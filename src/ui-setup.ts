@@ -14,7 +14,6 @@ import {
 	getKeybindings,
 	Input,
 	matchesKey,
-	visibleWidth,
 } from "@earendil-works/pi-tui";
 
 import {
@@ -23,6 +22,7 @@ import {
 	resolveConfigValue,
 	saveConfig,
 } from "./config.ts";
+import { frame, frameInner } from "./ui-frame.ts";
 
 interface Theme {
 	fg(name: string, s: string): string;
@@ -104,13 +104,9 @@ export async function runSetup(
 		const prefill = forceAll
 			? (values[step.label] ?? step.initialValue ?? "")
 			: (values[step.label] ?? "");
-		// Skip already-filled non-empty fields when called for first-run setup
-		// (we still want to ask for missing pieces, but not re-prompt for
-		// what's already saved).
 		if (!forceAll && prefill) {
 			continue;
 		}
-
 		const result = await promptStep(
 			ctx,
 			step,
@@ -123,7 +119,7 @@ export async function runSetup(
 		const trimmed = result.trim();
 		if (!trimmed) {
 			if (step.required) {
-				ctx.ui.notify(`${step.label} is required — aborted`, "warning");
+				ctx.ui.notify(`${step.label} is required \u2014 aborted`, "warning");
 				cancelled = true;
 				break;
 			}
@@ -153,10 +149,6 @@ export async function runSetup(
 	return true;
 }
 
-/**
- * If the user typed a bare ~/path or /abs/path, wrap it in `!cat <path>`
- * so resolveConfigValue executes it. Otherwise return as-is.
- */
 function normalizeValue(raw: string): string {
 	if (raw.startsWith("!") || raw.startsWith("$")) return raw;
 	if (raw.startsWith("~/")) {
@@ -189,10 +181,7 @@ async function promptStep(
 				prefill,
 				done,
 			),
-		{
-			overlay: true,
-			overlayOptions: { width: 100, maxHeight: "60%" },
-		},
+		{ overlay: true, overlayOptions: { width: 100, maxHeight: "60%" } },
 	);
 }
 
@@ -220,8 +209,6 @@ function buildStepOverlay(
 		}
 		if (step.validate) {
 			const trimmed = raw.trim();
-			// Only validate the literal form. Indirect ("!", "$") values are
-			// validated at apply time, not here.
 			if (trimmed && !trimmed.startsWith("!") && !trimmed.startsWith("$")) {
 				const err = step.validate(trimmed);
 				if (err) {
@@ -239,38 +226,30 @@ function buildStepOverlay(
 
 	return {
 		render(width: number): string[] {
-			const inner = Math.max(40, width - 2);
-			const top = theme.fg(
-				"borderAccent",
-				`\u256d\u2500 ${theme.bold(theme.fg("accent", `setup: ${step.label}`))} ${"\u2500".repeat(Math.max(0, inner - visibleWidth(`setup: ${step.label}`) - 4))}\u256e`,
-			);
-			const hintLine = pad(theme.fg("dim", step.hint), inner - 2);
+			const inner = frameInner(width);
 			const inputLines = input.render(inner - 4);
-			const errLine = error
-				? pad(theme.fg("error", `! ${error}`), inner - 2)
-				: pad(theme.fg("dim", "enter = save  ·  esc = cancel"), inner - 2);
-			const side = theme.fg("borderAccent", "\u2502");
-			const out: string[] = [top];
-			out.push(`${side} ${hintLine} ${side}`);
-			out.push(`${side} ${pad("", inner - 2)} ${side}`);
-			for (const ln of inputLines) {
-				out.push(
-					`${side} ${pad(theme.fg("accent", `> ${ln}`), inner - 2)} ${side}`,
-				);
-			}
-			out.push(`${side} ${pad("", inner - 2)} ${side}`);
-			out.push(`${side} ${errLine} ${side}`);
-			out.push(
-				theme.fg("borderAccent", `\u2570${"\u2500".repeat(inner)}\u256f`),
-			);
-			return out;
+			const lines: string[] = [
+				"",
+				` ${theme.fg("dim", step.hint)}`,
+				"",
+				...inputLines.map((ln) => ` ${theme.fg("accent", `\u276f ${ln}`)}`),
+				"",
+				error
+					? ` ${theme.fg("error", `! ${error}`)}`
+					: ` ${theme.fg("dim", "enter = save  \u00b7  esc = cancel")}`,
+			];
+			return frame(theme, {
+				width,
+				title: ` setup: ${step.label} `,
+				lines,
+				footer: { hint: " enter = save  \u00b7  esc = cancel " },
+			});
 		},
 		invalidate(): void {
 			input.invalidate();
 		},
 		handleInput(data: string): void {
 			const kb = getKeybindings();
-			// Plain Esc cancels even if Input doesn't dispatch it.
 			if (kb.matches(data, "tui.select.cancel") || matchesKey(data, "escape")) {
 				done(undefined);
 				return;
@@ -280,10 +259,4 @@ function buildStepOverlay(
 			tui.requestRender();
 		},
 	};
-}
-
-function pad(s: string, width: number): string {
-	const w = visibleWidth(s);
-	if (w >= width) return s;
-	return s + " ".repeat(width - w);
 }

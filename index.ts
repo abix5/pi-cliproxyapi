@@ -7,7 +7,7 @@
  *   2. fetch discovery (well-known → fall back to /v1/models)
  *   3. call pi.registerProvider for each enabled built-in + custom provider
  *   4. register slash commands /cliproxy /cliproxy-setup /cliproxy-refresh
- *      /cliproxy-list /cliproxy-usage /cliproxy-doctor
+ *      /cliproxy-usage /cliproxy-doctor
  *
  * All discovery + apply errors are logged but never abort extension load —
  * a missing/broken proxy must not prevent Pi from starting.

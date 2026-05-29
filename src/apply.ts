@@ -37,6 +37,36 @@ export async function applyAll(
 	}
 
 	// -------- builtin providers (anthropic, openai, etc.)
+	const builtinByName = new Map<
+		string,
+		Array<{
+			id: string;
+			name: string;
+			reasoning: boolean;
+			contextWindow: number;
+			maxTokens: number;
+			cost: {
+				input: number;
+				output: number;
+				cacheRead: number;
+				cacheWrite: number;
+			};
+		}>
+	>();
+	for (const p of discovery.builtinProviders) {
+		builtinByName.set(
+			p.name,
+			p.models.map((m) => ({
+				id: m.id,
+				name: m.name,
+				reasoning: m.reasoning,
+				contextWindow: m.contextWindow,
+				maxTokens: m.maxTokens,
+				cost: m.cost,
+			})),
+		);
+	}
+
 	for (const [name, p] of Object.entries(cfg.builtinProviders)) {
 		if (!p?.enabled) {
 			report.skipped.push({ provider: name, reason: "disabled" });
@@ -46,7 +76,7 @@ export async function applyAll(
 			report.skipped.push({ provider: name, reason: "empty whitelist" });
 			continue;
 		}
-		let builtin: ReadonlyArray<{
+		let catalog: ReadonlyArray<{
 			id: string;
 			name: string;
 			api: Api;
@@ -56,19 +86,64 @@ export async function applyAll(
 			contextWindow: number;
 			maxTokens: number;
 			thinkingLevelMap?: any;
-		}>;
+		}> = [];
 		try {
-			builtin = getModels(name as any) as any;
+			catalog = getModels(name as any) as any;
 		} catch {
-			report.skipped.push({
-				provider: name,
-				reason: `pi-ai has no provider "${name}"`,
-			});
-			continue;
+			/* unknown provider in pi-ai catalog — keep going with proxy data */
 		}
-		const selected = builtin.filter(
-			(m) => p.models.includes(m.id) && proxyIds.has(m.id),
+		const catalogById = new Map(catalog.map((m) => [m.id, m]));
+		const proxyById = new Map(
+			(builtinByName.get(name) ?? []).map((m) => [m.id, m]),
 		);
+
+		interface MergedModel {
+			id: string;
+			name: string;
+			reasoning: boolean;
+			contextWindow: number;
+			maxTokens: number;
+			cost: any;
+			input: ("text" | "image")[];
+			api: Api;
+			thinkingLevelMap?: any;
+		}
+		const selected: MergedModel[] = [];
+		for (const id of p.models) {
+			if (!proxyIds.has(id)) continue;
+			const c = catalogById.get(id);
+			const px = proxyById.get(id);
+			if (c) {
+				selected.push({
+					id: c.id,
+					name: c.name,
+					reasoning: c.reasoning,
+					contextWindow: c.contextWindow,
+					maxTokens: c.maxTokens,
+					cost: c.cost,
+					input: c.input,
+					api: c.api,
+					thinkingLevelMap: c.thinkingLevelMap,
+				});
+				continue;
+			}
+			if (!px) continue;
+			// Catalog miss — fall back to proxy metadata. Pick API by provider name.
+			const api: Api =
+				name === "anthropic"
+					? "anthropic-messages"
+					: ((p.apiOverride as Api | undefined) ?? "openai-responses");
+			selected.push({
+				id: px.id,
+				name: px.name,
+				reasoning: px.reasoning,
+				contextWindow: px.contextWindow,
+				maxTokens: px.maxTokens,
+				cost: px.cost,
+				input: ["text"],
+				api,
+			});
+		}
 		if (selected.length === 0) {
 			report.skipped.push({
 				provider: name,

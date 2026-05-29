@@ -19,12 +19,21 @@ One `(endpoint, apiKey)` pair — every provider and model inherits it automatic
 
 | Command | Description |
 | --- | --- |
-| `/cliproxy` | Interactive overlay — enable providers, toggle models, create custom groups |
+| `/cliproxy` | Three-panel picker — providers, assigned models, available pool |
 | `/cliproxy-setup` | Configure endpoint, API key, provider prefix, usage key |
 | `/cliproxy-refresh` | Re-fetch upstream models, re-register providers |
-| `/cliproxy-list` | Read-only view of current configuration |
 | `/cliproxy-usage` | Per-account quota windows with progress bars (`d` = show disabled, `v` = verbose) |
 | `/cliproxy-doctor` | Connectivity, key resolution, discovery diagnostics |
+
+### `/cliproxy` picker
+
+The picker has three panels you cycle through with `Tab` / arrow keys:
+
+- **left** — every provider (built-in + custom). `+ new custom group…` is the last row.
+- **right top** — models currently assigned to the focused provider. `Enter` / `Space` removes one.
+- **right bottom** — available model pool, grouped by upstream `owned_by`. `Enter` / `Space` attaches a model to the focused provider.
+
+Extra keys: `d` removes a custom group (with confirmation), `s` saves, `q` / `Esc` cancels. A `⚠` marker shows when a model's recommended API differs from the provider's API — attach is allowed anyway.
 
 ## Prerequisites
 
@@ -143,7 +152,7 @@ The sidecar is **optional for basic usage** — without it the plugin falls back
 | Model discovery | Enriched from [models.dev](https://models.dev) (real context windows, costs, reasoning) | Defaults: `contextWindow=128k`, `maxTokens=16k`, `cost=0`, `reasoning=false` |
 | `/cliproxy-usage` | Works — per-account quota bars | **Does not work** (no `/api/usage` endpoint) |
 | Classification | Server-side, accurate | Local heuristics by `owned_by` |
-| `/cliproxy`, `/cliproxy-list`, `/cliproxy-doctor` | Work | Work |
+| `/cliproxy`, `/cliproxy-doctor` | Work | Work |
 
 ## Layout
 
@@ -151,15 +160,27 @@ The sidecar is **optional for basic usage** — without it the plugin falls back
 index.ts            ExtensionFactory entry point
 src/
   config.ts         ~/.config/pi-cliproxyapi/config.json
-  commands.ts       6 slash commands
+  commands.ts       5 slash commands
   apply.ts          pi.registerProvider calls
   fetch-models.ts   well-known + /v1/models fallback
   fetch-usage.ts    /api/usage client with TTL cache
   compat.ts         baseUrl derivation, model classification
   conflicts.ts      read-only ~/.pi/{models,auth}.json scan
-  ui-picker.ts      overlay picker with collapsible provider groups
-  ui-usage.ts       ANSI-colored usage renderer
+  ui-frame.ts       single source of truth for overlay frames
   ui-overlay.ts     scrollable overlay shell with toggles
   ui-setup.ts       setup wizard
+  ui-usage.ts       ANSI-coloured usage renderer
+  ui-picker/        three-panel /cliproxy overlay
+    index.ts        public runPicker entry
+    types.ts        shared TS types
+    catalog.ts      build a model lookup from discovery
+    providers.ts    resolve the providers shown in the left panel
+    mutate.ts       attach / detach / claim helpers + pool grouping
+    render-text.ts  ANSI-aware pad / truncate
+    rows.ts         per-row renderers for left / right panels
+    picker.ts       state + navigation, glues catalogue to UI
+    picker-component.ts  render + input dispatch
+    prompt-confirm.ts    remove-group confirmation
+    prompt-name.ts       new-group name prompt
   log.ts            tagged logger
 ```
