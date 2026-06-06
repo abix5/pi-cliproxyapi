@@ -6,8 +6,8 @@
  *   1. load ~/.config/pi-cliproxyapi/config.json (defaults if missing)
  *   2. fetch discovery (well-known → fall back to /v1/models)
  *   3. call pi.registerProvider for each enabled built-in + custom provider
- *   4. register slash commands /cliproxy /cliproxy-setup /cliproxy-refresh
- *      /cliproxy-usage /cliproxy-doctor
+ *   4. register slash commands /cliproxy and /cliproxy-setup
+ *      (refresh, usage, and diagnostics are tabs/actions inside the hub)
  *
  * All discovery + apply errors are logged but never abort extension load —
  * a missing/broken proxy must not prevent Pi from starting.
@@ -43,7 +43,7 @@ export default async function cliproxyapi(pi: ExtensionAPI): Promise<void> {
 		await applyAll(pi, cfg, discovery);
 	} catch (err) {
 		log.error("initial apply failed:", (err as Error).message);
-		// Commands stay registered; user can /cliproxy-doctor or /cliproxy-refresh.
+		// Commands stay registered; user can open /cliproxy and press r to refresh.
 	}
 
 	if (cfg.refreshIntervalMinutes > 0) {

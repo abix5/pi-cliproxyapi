@@ -131,3 +131,37 @@ export function groupPoolByOwnedBy(
 		.sort((a, b) => a[0].localeCompare(b[0]))
 		.map(([label, arr]) => ({ label, ids: arr }));
 }
+
+/**
+ * Substring filter over model id + display name (case-insensitive). Empty
+ * query returns the input untouched. Used by the pool filter box.
+ */
+export function filterModelIds(
+	ids: string[],
+	catalog: CatalogIndex,
+	query: string,
+): string[] {
+	const q = query.trim().toLowerCase();
+	if (!q) return ids;
+	return ids.filter((id) => {
+		if (id.toLowerCase().includes(q)) return true;
+		const name = catalog.byId.get(id)?.name;
+		return name ? name.toLowerCase().includes(q) : false;
+	});
+}
+
+/**
+ * Single source of truth for pool ordering: the grouped order flattened. The
+ * picker MUST index navigation + activation through this so the visually
+ * highlighted row always maps to the model that gets toggled. (Rendering
+ * iterates the same `groupPoolByOwnedBy` groups, so indices line up exactly.)
+ */
+export function poolDisplayOrder(
+	cfg: ProxyConfig,
+	prov: ProviderEntry,
+	catalog: CatalogIndex,
+	filter = "",
+): string[] {
+	const ids = filterModelIds(poolFor(cfg, prov, catalog), catalog, filter);
+	return groupPoolByOwnedBy(ids, catalog).flatMap((g) => g.ids);
+}

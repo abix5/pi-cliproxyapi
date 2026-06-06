@@ -9,37 +9,44 @@ One `(endpoint, apiKey)` pair — every provider and model inherits it automatic
 
 ## Features
 
+- **Unified hub** — one `/cliproxy` overlay with **Models / Usage / Diagnostics** tabs (number hotkeys `1` `2` `3`) plus global actions: `r` refresh, `e` setup, `s` save
 - **Built-in provider routing** — whitelist which Anthropic / OpenAI / etc. models are available through the proxy
 - **Custom provider groups** — create named groups (e.g. `corp-glm`, `corp-gemini`) for proxy-only models with automatic metadata from [models.dev](https://models.dev)
-- **Exclusive model pool** — a model assigned to one group automatically disappears from others
-- **Per-account usage overlay** — colored quota bars, toggle disabled accounts, verbose errors — no LLM call
+- **Exclusive model pool** — a model assigned to one group automatically disappears from others, grouped by `owned_by` with type-to-filter (`/`)
+- **Live save state** — the header shows `● unsaved` while you edit and `✓ settings saved` after `s`, no console noise
+- **Per-account usage tab** — colored quota bars, toggle disabled accounts, verbose errors — no LLM call
 - **Setup wizard** — `/cliproxy-setup` configures endpoint, API key, provider prefix, and usage key interactively
 
 ## Commands
 
+Two commands; everything else lives inside the hub as tabs and actions.
+
 | Command | Description |
 | --- | --- |
-| `/cliproxy` | Three-panel picker — providers, assigned models, available pool |
+| `/cliproxy` | Hub overlay — **Models** / **Usage** / **Diagnostics** tabs plus global actions |
 | `/cliproxy-setup` | Configure endpoint, API key, provider prefix, usage key |
-| `/cliproxy-refresh` | Re-fetch upstream models, re-register providers |
-| `/cliproxy-usage` | Per-account quota windows with progress bars (`d` = show disabled, `v` = verbose) |
-| `/cliproxy-doctor` | Connectivity, key resolution, discovery diagnostics |
 
-### `/cliproxy` picker
+### The `/cliproxy` hub
 
-The picker has three panels you cycle through with `Tab` / arrow keys:
+Global keys: `[` / `]` or `1` `2` `3` switch tabs · `r` refresh discovery + reapply · `e` setup · `s` save · `q` / `Esc` close.
+
+**Models tab** — three panels cycled with `Tab` / arrows:
 
 - **left** — every provider (built-in + custom). `+ new custom group…` is the last row.
-- **right top** — models currently assigned to the focused provider. `Enter` / `Space` removes one.
-- **right bottom** — available model pool, grouped by upstream `owned_by`. `Enter` / `Space` attaches a model to the focused provider.
+- **right top** — models assigned to the focused provider. `Enter` / `Space` removes one.
+- **right bottom** — available pool, grouped by upstream `owned_by`. `Enter` / `Space` attaches. Press `/` to filter the pool by id/name. A `⚠` marks an API mismatch (attach still allowed).
 
-Extra keys: `d` removes a custom group (with confirmation), `s` saves, `q` / `Esc` cancels. A `⚠` marker shows when a model's recommended API differs from the provider's API — attach is allowed anyway.
+Extra Models keys: `d` removes a custom group (with confirmation).
+
+**Usage tab** — per-account quota bars; `d` shows disabled accounts, `v` shows verbose errors.
+
+**Diagnostics tab** — connectivity, key resolution, and discovery shape.
 
 ## Prerequisites
 
 You need a running [CliProxyAPI](https://github.com/router-for-me/CLIProxyAPI) instance — this is the corporate LLM proxy that aggregates multiple providers behind a single OpenAI-compatible endpoint.
 
-For full functionality (`/cliproxy-usage`, enriched model metadata from [models.dev](https://models.dev)), also deploy the companion sidecar: **[pi-cliproxyapi-wellknown](https://github.com/abix5/pi-cliproxyapi-wellknown)**. See [Deploying the sidecar](#deploying-the-sidecar-service) below.
+For full functionality (Usage tab, enriched model metadata from [models.dev](https://models.dev)), also deploy the companion sidecar: **[pi-cliproxyapi-wellknown](https://github.com/abix5/pi-cliproxyapi-wellknown)**. See [Deploying the sidecar](#deploying-the-sidecar-service) below.
 
 ## Install
 
@@ -85,7 +92,7 @@ The plugin tries `GET <endpoint-origin>/.well-known/pi` first (requires the side
 The **[pi-cliproxyapi-wellknown](https://github.com/abix5/pi-cliproxyapi-wellknown)** sidecar runs alongside CliProxyAPI and provides:
 
 - `/.well-known/pi` — model discovery with metadata from [models.dev](https://models.dev) (context windows, costs, reasoning flags)
-- `/api/usage` — per-account quota windows used by `/cliproxy-usage`
+- `/api/usage` — per-account quota windows used by the hub Usage tab
 
 ```
 ┌──────────────┐     ┌───────────────────────────┐
@@ -143,16 +150,16 @@ Run `/cliproxy-setup` in Pi and enter:
 - **endpoint** — your public proxy URL ending with `/v1`
 - **apiKey** — CliProxyAPI bearer key
 - **providerPrefix** — short slug for custom provider names (e.g. `corp`, `myproxy`)
-- **usageKey** — same value as `PI_PLUGIN_USAGE_KEY` above (enables `/cliproxy-usage`)
+- **usageKey** — same value as `PI_PLUGIN_USAGE_KEY` above (enables the Usage tab)
 
 The sidecar is **optional for basic usage** — without it the plugin falls back to raw `/v1/models` with local heuristics. What changes:
 
 | | With sidecar | Without sidecar |
 | --- | --- | --- |
 | Model discovery | Enriched from [models.dev](https://models.dev) (real context windows, costs, reasoning) | Defaults: `contextWindow=128k`, `maxTokens=16k`, `cost=0`, `reasoning=false` |
-| `/cliproxy-usage` | Works — per-account quota bars | **Does not work** (no `/api/usage` endpoint) |
+| Usage tab | Works — per-account quota bars | **Does not work** (no `/api/usage` endpoint) |
 | Classification | Server-side, accurate | Local heuristics by `owned_by` |
-| `/cliproxy`, `/cliproxy-doctor` | Work | Work |
+| `/cliproxy` hub | Works | Works (Usage tab shows an error) |
 
 ## Layout
 
@@ -160,26 +167,30 @@ The sidecar is **optional for basic usage** — without it the plugin falls back
 index.ts            ExtensionFactory entry point
 src/
   config.ts         ~/.config/pi-cliproxyapi/config.json
-  commands.ts       5 slash commands
+  commands.ts       2 slash commands (hub + setup)
   apply.ts          pi.registerProvider calls
   fetch-models.ts   well-known + /v1/models fallback
   fetch-usage.ts    /api/usage client with TTL cache
   compat.ts         baseUrl derivation, model classification
   conflicts.ts      read-only ~/.pi/{models,auth}.json scan
   ui-frame.ts       single source of truth for overlay frames
-  ui-overlay.ts     scrollable overlay shell with toggles
   ui-setup.ts       setup wizard
   ui-usage.ts       ANSI-coloured usage renderer
-  ui-picker/        three-panel /cliproxy overlay
-    index.ts        public runPicker entry
+  ui-hub/           the /cliproxy hub overlay
+    index.ts        public runHub entry
+    hub.ts          tabs, status header, global actions
+    types.ts        HubView contract
+    shell.ts        tab bar, status header, scroll/slice helpers
+    view-models.ts  three-panel picker (single pool ordering + filter)
+    view-usage.ts   usage tab (lazy fetch + d/v toggles)
+    view-diagnostics.ts  diagnostics tab
+  ui-picker/        picker building blocks reused by the Models view
     types.ts        shared TS types
     catalog.ts      build a model lookup from discovery
     providers.ts    resolve the providers shown in the left panel
-    mutate.ts       attach / detach / claim helpers + pool grouping
+    mutate.ts       attach / detach / claim + pool grouping + display order
     render-text.ts  ANSI-aware pad / truncate
     rows.ts         per-row renderers for left / right panels
-    picker.ts       state + navigation, glues catalogue to UI
-    picker-component.ts  render + input dispatch
     prompt-confirm.ts    remove-group confirmation
     prompt-name.ts       new-group name prompt
   log.ts            tagged logger

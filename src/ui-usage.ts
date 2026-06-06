@@ -1,4 +1,4 @@
-// Renders /api/usage as multi-line ANSI text for /cliproxy-usage overlay.
+// Renders /api/usage as multi-line ANSI text for the hub Usage tab.
 //
 // Lines are wrapped pre-render so they never reflow inside the overlay box —
 // long errors get truncated with an ellipsis on the same line. Progress bars

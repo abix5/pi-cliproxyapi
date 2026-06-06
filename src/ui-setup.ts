@@ -66,7 +66,7 @@ const STEPS: WizardStep[] = [
 	},
 	{
 		label: "usageKey",
-		hint: "Optional X-Plugin-Key for /api/usage. Leave blank to skip /cliproxy-usage",
+		hint: "Optional X-Plugin-Key for /api/usage. Leave blank to skip the Usage tab",
 		required: false,
 	},
 ];

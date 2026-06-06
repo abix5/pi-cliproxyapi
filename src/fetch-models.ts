@@ -20,7 +20,7 @@ import {
 import type { ProxyConfig } from "./config.ts";
 import { log } from "./log.ts";
 
-export const PLUGIN_USER_AGENT = "pi-cliproxyapi/0.1.0";
+export const PLUGIN_USER_AGENT = "pi-cliproxyapi/0.3.0";
 const REQUEST_TIMEOUT_MS = 5_000;
 
 export interface DiscoveryModelEntry {
@@ -215,10 +215,7 @@ async function fetchRawModels(
 		.filter((m) => m.id);
 }
 
-function classifyLocally(
-	raw: RawUpstreamModel[],
-	cfg: ProxyConfig,
-): Discovery {
+function classifyLocally(raw: RawUpstreamModel[], cfg: ProxyConfig): Discovery {
 	const excludes = cfg.discoveryExcludes;
 	const builtinByName = new Map<string, DiscoveryBuiltinProvider>();
 	const customPool: DiscoveryCustomEntry[] = [];
