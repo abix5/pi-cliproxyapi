@@ -20,7 +20,7 @@ import {
 import type { ProxyConfig } from "./config.ts";
 import { log } from "./log.ts";
 
-export const PLUGIN_USER_AGENT = "pi-cliproxyapi/0.3.0";
+export const PLUGIN_USER_AGENT = "pi-cliproxyapi/0.3.1";
 const REQUEST_TIMEOUT_MS = 5_000;
 
 export interface DiscoveryModelEntry {

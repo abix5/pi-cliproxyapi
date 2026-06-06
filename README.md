@@ -1,3 +1,12 @@
+```
+██████╗ ██╗     ██████╗██╗     ██╗██████╗ ██████╗  ██████╗ ██╗  ██╗██╗   ██╗
+██╔══██╗██║    ██╔════╝██║     ██║██╔══██╗██╔══██╗██╔═══██╗╚██╗██╔╝╚██╗ ██╔╝
+██████╔╝██║    ██║     ██║     ██║██████╔╝██████╔╝██║   ██║ ╚███╔╝  ╚████╔╝
+██╔═══╝ ██║    ██║     ██║     ██║██╔═══╝ ██╔══██╗██║   ██║ ██╔██╗   ╚██╔╝
+██║     ██║    ╚██████╗███████╗██║██║     ██║  ██║╚██████╔╝██╔╝ ██╗   ██║
+╚═╝     ╚═╝     ╚═════╝╚══════╝╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝
+```
+
 # pi-cliproxyapi
 
 [![npm](https://img.shields.io/npm/v/pi-cliproxyapi)](https://www.npmjs.com/package/pi-cliproxyapi)
@@ -6,6 +15,8 @@
 Pi extension for corporate management of model providers via a single [CliProxyAPI](https://github.com/router-for-me/CLIProxyAPI) endpoint.
 
 One `(endpoint, apiKey)` pair — every provider and model inherits it automatically.
+
+![pi-cliproxyapi — the /cliproxy hub, Models tab](docs/pi-cliproxyapi-1.png)
 
 ## Features
 
@@ -41,6 +52,20 @@ Extra Models keys: `d` removes a custom group (with confirmation).
 **Usage tab** — per-account quota bars; `d` shows disabled accounts, `v` shows verbose errors.
 
 **Diagnostics tab** — connectivity, key resolution, and discovery shape.
+
+## Screenshots
+
+**Models — custom group, pool grouped by owner (`/` filters the pool)**
+
+![Models tab: custom proxy group with grouped available pool](docs/pi-cliproxyapi-2.png)
+
+**Usage — per-account quota windows**
+
+![Usage tab: per-account quota bars with reset windows](docs/pi-cliproxyapi-3.png)
+
+**Diagnostics — connectivity, keys, discovery shape**
+
+![Diagnostics tab: endpoint, key resolution, discovery and conflicts](docs/pi-cliproxyapi-4.png)
 
 ## Prerequisites
 
@@ -96,14 +121,14 @@ The **[pi-cliproxyapi-wellknown](https://github.com/abix5/pi-cliproxyapi-wellkno
 
 ```
 ┌──────────────┐     ┌───────────────────────────┐
-│  Pi + plugin  │────▶│  CliProxyAPI (:8317)       │
-│               │     │  /v1/models, /v1/chat/...  │
-│               │     └───────────────────────────┘
-│               │     ┌───────────────────────────┐
-│               │────▶│  wellknown sidecar (:3458)  │
-│               │     │  /.well-known/pi            │
-│               │     │  /api/usage                 │
-│               │     └───────────────────────────┘
+│  Pi + plugin │────▶│  CliProxyAPI (:8317)      │
+│              │     │  /v1/models, /v1/chat/... │
+│              │     └───────────────────────────┘
+│              │     ┌───────────────────────────┐
+│              │────▶│  wellknown sidecar (:3458)│
+│              │     │  /.well-known/pi          │
+│              │     │  /api/usage               │
+│              │     └───────────────────────────┘
 └──────────────┘
 ```
 
