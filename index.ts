@@ -16,6 +16,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { applyAll } from "./src/apply.ts";
+import { readDiscoveryCache } from "./src/cache.ts";
 import { registerCommands } from "./src/commands.ts";
 import { loadConfig, resolveConfigValue } from "./src/config.ts";
 import { detectConflicts } from "./src/conflicts.ts";
@@ -39,8 +40,31 @@ export default async function cliproxyapi(pi: ExtensionAPI): Promise<void> {
 	for (const c of conflicts) log.warn(`conflict (${c.kind}): ${c.detail}`);
 
 	try {
-		const discovery = await fetchDiscovery(cfg, resolvedKey);
-		await applyAll(pi, cfg, discovery);
+		const cached = readDiscoveryCache();
+		if (cached) {
+			// Serve the last good discovery instantly so Pi startup never blocks on
+			// the ~5s proxy round-trip, then revalidate over the network in the
+			// background (applyAll is idempotent — it just re-registers providers).
+			log.info(
+				`discovery from cache (age ${Math.round(cached.ageMs / 1000)}s): ${cached.discovery.builtinProviders.length} builtin, ${cached.discovery.customPool.length} custom`,
+			);
+			await applyAll(pi, cfg, cached.discovery);
+			void (async () => {
+				try {
+					const fresh = await fetchDiscovery(cfg, resolvedKey);
+					await applyAll(pi, cfg, fresh);
+					log.debug("discovery revalidated from network");
+				} catch (e) {
+					log.warn(
+						"background discovery revalidate failed:",
+						(e as Error).message,
+					);
+				}
+			})();
+		} else {
+			const discovery = await fetchDiscovery(cfg, resolvedKey);
+			await applyAll(pi, cfg, discovery);
+		}
 	} catch (err) {
 		log.error("initial apply failed:", (err as Error).message);
 		// Commands stay registered; user can open /cliproxy and press r to refresh.

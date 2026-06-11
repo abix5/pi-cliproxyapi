@@ -17,10 +17,11 @@ import {
 	normalizeSuggestedProvider,
 	reasoningFromId,
 } from "./compat.ts";
+import { writeDiscoveryCache } from "./cache.ts";
 import type { ProxyConfig } from "./config.ts";
 import { log } from "./log.ts";
 
-export const PLUGIN_USER_AGENT = "pi-cliproxyapi/0.3.2";
+export const PLUGIN_USER_AGENT = "pi-cliproxyapi/0.3.3";
 const REQUEST_TIMEOUT_MS = 5_000;
 
 export interface DiscoveryModelEntry {
@@ -308,6 +309,7 @@ export async function fetchDiscovery(
 		log.info(
 			`discovery via /.well-known/pi: ${wk.builtinProviders.length} builtin, ${wk.customPool.length} custom`,
 		);
+		writeDiscoveryCache(wk);
 		return wk;
 	}
 	if (!resolvedKey) {
@@ -320,6 +322,7 @@ export async function fetchDiscovery(
 	log.info(
 		`discovery via /v1/models: ${d.builtinProviders.length} builtin, ${d.customPool.length} custom`,
 	);
+	writeDiscoveryCache(d);
 	return d;
 }
 
