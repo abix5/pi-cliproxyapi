@@ -1,6 +1,6 @@
 {
   "name": "pi-cliproxyapi",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "type": "module",
   "description": "Pi extension for corporate management of model providers via a single CliProxyAPI endpoint",
   "license": "MIT",
