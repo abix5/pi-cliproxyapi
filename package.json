@@ -25,7 +25,8 @@
     "cliproxyapi"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:migration": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/check-config-migration.ts"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",

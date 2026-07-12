@@ -23,7 +23,7 @@ import type { UsageAccount, UsageDocument, UsageGroup } from "./fetch-usage.ts";
 const GAUGE_ICON = "\u{F0627}";
 
 /** Braille fill chars, 8 levels (empty → full). */
-const BRAILLE = ["⡀", "⠂", "▌", "⣄", "⣤", "⣶", "⣷", "⣾"];
+const BRAILLE = ["⡀", "⠂", "⣀", "⣄", "⣤", "⣶", "⣷", "⣾"];
 
 /**
  * Map a Pi provider name to the provider key used by the usage API.

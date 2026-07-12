@@ -83,15 +83,15 @@ Then run `/cliproxy-setup` to configure your proxy endpoint.
 
 ## Config
 
-`~/.config/pi-cliproxyapi/config.json` — created by `/cliproxy-setup`, editable by hand:
+`~/.pi/agent/pi-cliproxyapi/config.json` — created by `/cliproxy-setup`, editable by hand. If only the legacy `~/.config/pi-cliproxyapi/config.json` exists, an installed plugin moves it here once; a local checkout copies it and retains the legacy file.
 
 ```jsonc
 {
   "proxy": {
     "endpoint": "https://proxy.example.com/v1",
-    "apiKey": "!cat ~/.config/pi-cliproxyapi/key",
+    "apiKey": "!cat ~/.pi/agent/pi-cliproxyapi/key",
     "providerPrefix": "corp",
-    "usageKey": "!cat ~/.config/pi-cliproxyapi/usage-key"
+    "usageKey": "!cat ~/.pi/agent/pi-cliproxyapi/usage-key"
   },
   "builtinProviders": {
     "anthropic": { "enabled": true, "models": ["claude-opus-4-7"] },
@@ -106,7 +106,7 @@ Then run `/cliproxy-setup` to configure your proxy endpoint.
 }
 ```
 
-Values support `!command` (shell exec), `$ENV_VAR`, `~/path` (auto-wrapped to `!cat`), or literal strings.
+Values support `!command` (shell exec), `$ENV_VAR`, or literal strings. The `/cliproxy-setup` wizard also accepts bare `~/path` values and saves them as `!cat` commands; when editing the file by hand, write the `!cat ~/path` form explicitly.
 
 ## Discovery
 
@@ -191,7 +191,7 @@ The sidecar is **optional for basic usage** — without it the plugin falls back
 ```
 index.ts            ExtensionFactory entry point
 src/
-  config.ts         ~/.config/pi-cliproxyapi/config.json
+  config.ts         ~/.pi/agent/pi-cliproxyapi/config.json
   commands.ts       2 slash commands (hub + setup)
   apply.ts          pi.registerProvider calls
   fetch-models.ts   well-known + /v1/models fallback

@@ -3,7 +3,7 @@
  * CliProxyAPI endpoint with one corporate key.
  *
  * On factory boot we:
- *   1. load ~/.config/pi-cliproxyapi/config.json (defaults if missing)
+ *   1. load ~/.pi/agent/pi-cliproxyapi/config.json (migrates legacy config; defaults if missing)
  *   2. fetch discovery (well-known → fall back to /v1/models)
  *   3. call pi.registerProvider for each enabled built-in + custom provider
  *   4. register slash commands /cliproxy and /cliproxy-setup

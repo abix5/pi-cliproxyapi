@@ -1,13 +1,13 @@
-// ~/.config/pi-cliproxyapi/config.json — load, validate, persist.
+// ~/.pi/agent/pi-cliproxyapi/config.json — migrate, load, validate, persist.
 //
 // Schema:
 //
 //   {
 //     "proxy": {
 //       "endpoint": "https://your-proxy.example.com/v1",
-//       "apiKey":   "!cat ~/.config/pi-cliproxyapi/key",
+//       "apiKey":   "!cat ~/.pi/agent/pi-cliproxyapi/key",
 //       "providerPrefix": "myproxy",
-//       "usageKey": "!cat ~/.config/pi-cliproxyapi/usage-key"
+//       "usageKey": "!cat ~/.pi/agent/pi-cliproxyapi/usage-key"
 //     },
 //     "builtinProviders": {
 //       "openai":    { "enabled": true,  "apiOverride": null, "models": ["gpt-5.2"] },
@@ -26,16 +26,71 @@
 //   }
 
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+	constants,
+	copyFileSync,
+	existsSync,
+	linkSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	unlinkSync,
+	writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import type { Api } from "@earendil-works/pi-ai";
 
 import { log } from "./log.ts";
 
-export const CONFIG_DIR = join(homedir(), ".config", "pi-cliproxyapi");
+export const CONFIG_DIR = join(homedir(), ".pi", "agent", "pi-cliproxyapi");
 export const CONFIG_PATH = join(CONFIG_DIR, "config.json");
+const LEGACY_CONFIG_PATH = join(
+	homedir(),
+	".config",
+	"pi-cliproxyapi",
+	"config.json",
+);
+
+export function isLocalCheckout(): boolean {
+	return existsSync(
+		join(dirname(fileURLToPath(import.meta.url)), "..", ".git"),
+	);
+}
+
+export function migrateLegacyConfig(
+	legacyPath = LEGACY_CONFIG_PATH,
+	configPath = CONFIG_PATH,
+	localCheckout = isLocalCheckout(),
+): void {
+	if (existsSync(configPath) || !existsSync(legacyPath)) return;
+	let temporaryPath: string | undefined;
+	try {
+		mkdirSync(dirname(configPath), { recursive: true });
+		temporaryPath = `${configPath}.${process.pid}.${randomUUID()}.tmp`;
+		copyFileSync(legacyPath, temporaryPath, constants.COPYFILE_EXCL);
+		linkSync(temporaryPath, configPath);
+		rmSync(temporaryPath);
+		temporaryPath = undefined;
+		if (!localCheckout) unlinkSync(legacyPath);
+		log.info(
+			localCheckout ? "legacy config copied to" : "legacy config moved to",
+			configPath,
+		);
+	} catch (err) {
+		if (temporaryPath) {
+			try {
+				rmSync(temporaryPath, { force: true });
+			} catch (cleanupErr) {
+				log.warn("failed to clean temporary config:", cleanupErr);
+			}
+		}
+		log.warn("failed to migrate legacy config:", err);
+	}
+}
 
 export interface BuiltinProviderConfig {
 	enabled: boolean;
@@ -92,6 +147,7 @@ const DEFAULT_CONFIG: ProxyConfig = {
 };
 
 export function loadConfig(): ProxyConfig {
+	migrateLegacyConfig();
 	if (!existsSync(CONFIG_PATH)) {
 		log.info("config not found, using defaults at", CONFIG_PATH);
 		return structuredClone(DEFAULT_CONFIG);
@@ -115,9 +171,7 @@ function normalizeConfig(raw: unknown): ProxyConfig {
 	if (!raw || typeof raw !== "object") return structuredClone(DEFAULT_CONFIG);
 	const r = raw as Record<string, unknown>;
 	const merged = structuredClone(DEFAULT_CONFIG);
-	const proxyBlock =
-		(r.proxy as Record<string, unknown> | undefined) ??
-		{};
+	const proxyBlock = (r.proxy as Record<string, unknown> | undefined) ?? {};
 	merged.proxy.endpoint =
 		typeof proxyBlock.endpoint === "string"
 			? proxyBlock.endpoint
